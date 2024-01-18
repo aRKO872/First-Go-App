@@ -23,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TodoServiceClient interface {
 	CreateTodo(ctx context.Context, in *NewTodo, opts ...grpc.CallOption) (*Todos, error)
+	FetchAllTodos(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*ArrayOfTodos, error)
 }
 
 type todoServiceClient struct {
@@ -42,11 +43,21 @@ func (c *todoServiceClient) CreateTodo(ctx context.Context, in *NewTodo, opts ..
 	return out, nil
 }
 
+func (c *todoServiceClient) FetchAllTodos(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*ArrayOfTodos, error) {
+	out := new(ArrayOfTodos)
+	err := c.cc.Invoke(ctx, "/todo.TodoService/FetchAllTodos", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TodoServiceServer is the server API for TodoService service.
 // All implementations must embed UnimplementedTodoServiceServer
 // for forward compatibility
 type TodoServiceServer interface {
 	CreateTodo(context.Context, *NewTodo) (*Todos, error)
+	FetchAllTodos(context.Context, *EmptyRequest) (*ArrayOfTodos, error)
 	mustEmbedUnimplementedTodoServiceServer()
 }
 
@@ -56,6 +67,9 @@ type UnimplementedTodoServiceServer struct {
 
 func (UnimplementedTodoServiceServer) CreateTodo(context.Context, *NewTodo) (*Todos, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateTodo not implemented")
+}
+func (UnimplementedTodoServiceServer) FetchAllTodos(context.Context, *EmptyRequest) (*ArrayOfTodos, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FetchAllTodos not implemented")
 }
 func (UnimplementedTodoServiceServer) mustEmbedUnimplementedTodoServiceServer() {}
 
@@ -88,6 +102,24 @@ func _TodoService_CreateTodo_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TodoService_FetchAllTodos_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EmptyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TodoServiceServer).FetchAllTodos(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/todo.TodoService/FetchAllTodos",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TodoServiceServer).FetchAllTodos(ctx, req.(*EmptyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TodoService_ServiceDesc is the grpc.ServiceDesc for TodoService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -98,6 +130,10 @@ var TodoService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateTodo",
 			Handler:    _TodoService_CreateTodo_Handler,
+		},
+		{
+			MethodName: "FetchAllTodos",
+			Handler:    _TodoService_FetchAllTodos_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

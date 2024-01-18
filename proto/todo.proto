@@ -16,6 +16,17 @@ message Todos {
   bool done = 4;
 }
 
+message EditOrDeleteRequest {
+  string id = 1;
+}
+
+message EmptyRequest {}
+
+message ArrayOfTodos {
+  repeated Todos todoArr = 1;
+}
+
 service TodoService {
   rpc CreateTodo (NewTodo) returns (Todos);
+  rpc FetchAllTodos (EmptyRequest) returns (ArrayOfTodos);
 }
