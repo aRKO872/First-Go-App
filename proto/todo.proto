@@ -1,0 +1,21 @@
+syntax="proto3";
+
+package todo;
+
+option go_package = "github.com/aRKO872/first-go-app/proto/todo";
+
+message NewTodo {
+  string name = 1;
+  string description = 2;
+}
+
+message Todos {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  bool done = 4;
+}
+
+service TodoService {
+  rpc CreateTodo (NewTodo) returns (Todos);
+}
