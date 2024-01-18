@@ -24,6 +24,8 @@ const _ = grpc.SupportPackageIsVersion7
 type TodoServiceClient interface {
 	CreateTodo(ctx context.Context, in *NewTodo, opts ...grpc.CallOption) (*Todos, error)
 	FetchAllTodos(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*ArrayOfTodos, error)
+	EditSingleTodo(ctx context.Context, in *EditOrDeleteRequest, opts ...grpc.CallOption) (*Todos, error)
+	DeleteSingleTodo(ctx context.Context, in *EditOrDeleteRequest, opts ...grpc.CallOption) (*Todos, error)
 }
 
 type todoServiceClient struct {
@@ -52,12 +54,32 @@ func (c *todoServiceClient) FetchAllTodos(ctx context.Context, in *EmptyRequest,
 	return out, nil
 }
 
+func (c *todoServiceClient) EditSingleTodo(ctx context.Context, in *EditOrDeleteRequest, opts ...grpc.CallOption) (*Todos, error) {
+	out := new(Todos)
+	err := c.cc.Invoke(ctx, "/todo.TodoService/EditSingleTodo", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *todoServiceClient) DeleteSingleTodo(ctx context.Context, in *EditOrDeleteRequest, opts ...grpc.CallOption) (*Todos, error) {
+	out := new(Todos)
+	err := c.cc.Invoke(ctx, "/todo.TodoService/DeleteSingleTodo", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TodoServiceServer is the server API for TodoService service.
 // All implementations must embed UnimplementedTodoServiceServer
 // for forward compatibility
 type TodoServiceServer interface {
 	CreateTodo(context.Context, *NewTodo) (*Todos, error)
 	FetchAllTodos(context.Context, *EmptyRequest) (*ArrayOfTodos, error)
+	EditSingleTodo(context.Context, *EditOrDeleteRequest) (*Todos, error)
+	DeleteSingleTodo(context.Context, *EditOrDeleteRequest) (*Todos, error)
 	mustEmbedUnimplementedTodoServiceServer()
 }
 
@@ -70,6 +92,12 @@ func (UnimplementedTodoServiceServer) CreateTodo(context.Context, *NewTodo) (*To
 }
 func (UnimplementedTodoServiceServer) FetchAllTodos(context.Context, *EmptyRequest) (*ArrayOfTodos, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FetchAllTodos not implemented")
+}
+func (UnimplementedTodoServiceServer) EditSingleTodo(context.Context, *EditOrDeleteRequest) (*Todos, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EditSingleTodo not implemented")
+}
+func (UnimplementedTodoServiceServer) DeleteSingleTodo(context.Context, *EditOrDeleteRequest) (*Todos, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteSingleTodo not implemented")
 }
 func (UnimplementedTodoServiceServer) mustEmbedUnimplementedTodoServiceServer() {}
 
@@ -120,6 +148,42 @@ func _TodoService_FetchAllTodos_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TodoService_EditSingleTodo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EditOrDeleteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TodoServiceServer).EditSingleTodo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/todo.TodoService/EditSingleTodo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TodoServiceServer).EditSingleTodo(ctx, req.(*EditOrDeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TodoService_DeleteSingleTodo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EditOrDeleteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TodoServiceServer).DeleteSingleTodo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/todo.TodoService/DeleteSingleTodo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TodoServiceServer).DeleteSingleTodo(ctx, req.(*EditOrDeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TodoService_ServiceDesc is the grpc.ServiceDesc for TodoService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -134,6 +198,14 @@ var TodoService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FetchAllTodos",
 			Handler:    _TodoService_FetchAllTodos_Handler,
+		},
+		{
+			MethodName: "EditSingleTodo",
+			Handler:    _TodoService_EditSingleTodo_Handler,
+		},
+		{
+			MethodName: "DeleteSingleTodo",
+			Handler:    _TodoService_DeleteSingleTodo_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

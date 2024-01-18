@@ -41,6 +41,10 @@ func init() {
 func (s *TodoServer) CreateTodo(ctx context.Context, req *pb.NewTodo) (*pb.Todos, error) {
 	log.Printf("received: %v", req.GetName())
 	
+	if req.GetName() == "" || req.GetDescription() == "" {
+		return nil, errors.New("Please provide Name & Description!");
+	}
+
 	todo := &pb.Todos{
 		Name:        req.GetName(),
 		Description: req.GetDescription(),
@@ -73,6 +77,54 @@ func (s *TodoServer) FetchAllTodos(ctx context.Context, req *pb.EmptyRequest) (*
 		TodoArr: todos,
 	}, nil
 } 
+
+func (s *TodoServer) EditSingleTodo(ctx context.Context, req *pb.EditOrDeleteRequest) (*pb.Todos, error) {
+	todoId := req.Id;
+	if todoId == "" {
+		return nil, errors.New("Please Provide Todo - ID!")
+	}
+	todo := &pb.Todos {
+		Id: todoId,
+	}
+
+	result := DB.First (&todo);
+	if result.Error != nil || todo == nil {
+		return nil, errors.New ("Todo Does not Exist!")
+	}
+
+	if todo.Done {
+		result := DB.Model (&todo).Where ("id = ?", todoId).Update ("done", false)
+		if result.Error != nil {
+			return nil, errors.New ("Error Updating Todo!")
+		}
+	} else {
+		result := DB.Model (&todo).Where ("id = ?", todoId).Update ("done", true)
+		if result.Error != nil {
+			return nil, errors.New ("Error Updating Todo!")
+		}
+	}
+
+	return todo, nil
+}
+
+func (s *TodoServer) DeleteSingleTodo(ctx context.Context, req *pb.EditOrDeleteRequest) (*pb.Todos, error) {
+	todoId := req.GetId();
+	if todoId == "" {
+		return nil, errors.New("Please Provide Todo - ID!")
+	}
+	todo := &pb.Todos {
+		Id: todoId,
+	}
+
+	result := DB.First (&todo);
+	if result.Error != nil || todo == nil {
+		return nil, errors.New ("Todo Does not Exist!")
+	}
+
+	DB.Where("id = ?", todoId).Delete(&todo)
+
+	return todo, nil
+}
 
 func main() {
 	lis, err := net.Listen("tcp", ":6090")

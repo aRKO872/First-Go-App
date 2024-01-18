@@ -29,4 +29,6 @@ message ArrayOfTodos {
 service TodoService {
   rpc CreateTodo (NewTodo) returns (Todos);
   rpc FetchAllTodos (EmptyRequest) returns (ArrayOfTodos);
+  rpc EditSingleTodo (EditOrDeleteRequest) returns (Todos);
+  rpc DeleteSingleTodo (EditOrDeleteRequest) returns (Todos);
 }
