@@ -9,11 +9,37 @@ message NewTodo {
   string description = 2;
 }
 
+message RegisterUserInput {
+  string name = 1;
+  string email = 2;
+  string password = 3;
+}
+
+message LoginUserInput {
+  string email = 1;
+  string password = 2;
+}
+
+message LoginUserResponse {
+  bool status = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+  string err_msg = 4;
+}
+
+message Users {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+  string password = 4;
+}
+
 message Todos {
   string id = 1;
   string name = 2;
   string description = 3;
   bool done = 4;
+  string user_id = 5;
 }
 
 message EditOrDeleteRequest {
@@ -24,6 +50,11 @@ message EmptyRequest {}
 
 message ArrayOfTodos {
   repeated Todos todoArr = 1;
+}
+
+service AuthService {
+  rpc SignUp (RegisterUserInput) returns (LoginUserResponse);
+  rpc LogIn (LoginUserInput) returns (LoginUserResponse);
 }
 
 service TodoService {
