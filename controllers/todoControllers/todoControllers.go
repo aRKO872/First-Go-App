@@ -29,6 +29,7 @@ func (s *TodoServer) FetchAllTodos(ctx context.Context, req *pb.EmptyRequest) (*
 } 
 
 func (s *TodoServer) CreateTodo(ctx context.Context, req *pb.NewTodo) (*pb.Todos, error) {
+	
 	log.Printf("received: %v", req.GetName())
 	
 	if req.GetName() == "" || req.GetDescription() == "" {

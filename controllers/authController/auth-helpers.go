@@ -1,16 +1,24 @@
 package authcontrollers
 
 import (
-	"strings"
-	"regexp"
 	"errors"
+	"regexp"
+	"strings"
+	"time"
+
 	pb "github.com/aRKO872/first-go-app/proto"
+	"gorm.io/gorm"
 
 	"github.com/aRKO872/first-go-app/controllers/dbcontroller"
-	"golang.org/x/crypto/bcrypt"
-	"github.com/google/uuid"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
+
+type Claims struct {
+	UserId string 
+	jwt.RegisteredClaims
+}
 
 func validName (name string) bool {
 	name = strings.TrimSpace(name);
@@ -24,11 +32,60 @@ func validEmail (email string) bool {
 	return re.MatchString(email)
 }
 
-func validPassword (password string) bool {
-	password = strings.TrimSpace(password);
-	passwordRegex := `^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$`
-	re := regexp.MustCompile(passwordRegex)
-	return re.MatchString(password)
+func validPassword(password string) bool {
+	password = strings.TrimSpace(password)
+
+	// Check minimum length
+	if len(password) < 8 {
+		return false
+	}
+
+	// Check for at least one lowercase letter
+	hasLower := false
+	for _, char := range password {
+		if 'a' <= char && char <= 'z' {
+			hasLower = true
+			break
+		}
+	}
+
+	if !hasLower {
+		return false
+	}
+
+	// Check for at least one uppercase letter
+	hasUpper := false
+	for _, char := range password {
+		if 'A' <= char && char <= 'Z' {
+			hasUpper = true
+			break
+		}
+	}
+
+	if !hasUpper {
+		return false
+	}
+
+	// Check for at least one digit
+	hasDigit := false
+	for _, char := range password {
+		if '0' <= char && char <= '9' {
+			hasDigit = true
+			break
+		}
+	}
+
+	if !hasDigit {
+		return false
+	}
+
+	// Check for at least one special character
+	specialCharRegex := regexp.MustCompile(`[!@#$%^&*(),.?":{}|<>]`)
+	if !specialCharRegex.MatchString(password) {
+		return false
+	}
+
+	return true
 }
 
 func checkUserExists (req *pb.RegisterUserInput, fromLogin bool) (*pb.Users, error) {
@@ -36,17 +93,21 @@ func checkUserExists (req *pb.RegisterUserInput, fromLogin bool) (*pb.Users, err
 	result := dbcontroller.DB.Where("email = ?", req.GetEmail()).First (&user);
 
 	if result.Error != nil {
-		return nil, errors.New ("Error Occured While Checking Existence of User")
+		// User not found
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, errors.New ("error occured while checking existence of user")
 	}
 
 	// For Registration
 	if !fromLogin && user.GetId() != "" {
-		return nil, errors.New ("User already exists! Please try logging in!")
+		return nil, errors.New ("user already exists! please try logging in")
 	}
 
 	// For Logging In
 	if fromLogin && user.GetId() == "" {
-		return nil, errors.New ("User Does Not Exist. Please Sign Up!")
+		return nil, errors.New ("user does not xxist. please sign up")
 	}
 
 	if fromLogin {
@@ -60,7 +121,7 @@ func persistUser (
 ) (*pb.Users, error) {
 	hashedPasswordBytes, err := bcrypt.GenerateFromPassword([]byte(req.GetPassword()), bcrypt.DefaultCost)
 	if err != nil && len(hashedPasswordBytes) > 0 {
-		return nil, errors.New("Server error, unable to create your account.")
+		return nil, errors.New("server error, unable to create your account")
 	}
 
 	hashedPassword := string (hashedPasswordBytes[:]);
@@ -75,16 +136,26 @@ func persistUser (
 	result := dbcontroller.DB.Create(&saveUser)
 
 	if result.RowsAffected == 0 {
-		return nil, errors.New("Error Persisting User!")
+		return nil, errors.New("error persisting user")
 	}
 
 	return saveUser, nil;
 }
 
-func getUserToken (
-	user_id string
-) (
-	string, string, error
-) {
-	
+func generateToken(key string, expiration time.Duration, user_id string) (string, error) {
+	claims := &Claims{
+		UserId: user_id,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiration)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signedToken, err := token.SignedString([]byte(key[:]))
+	if err != nil {
+		return "", errors.New("error occured while generating token")
+	}
+
+	return signedToken, nil
 }
