@@ -159,3 +159,21 @@ func generateToken(key string, expiration time.Duration, user_id string) (string
 
 	return signedToken, nil
 }
+
+func ParseToken(tokenString string, key string) (*Claims, error) {
+	claims := &Claims{}
+
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(key), nil
+	})
+
+	if err != nil {
+		return nil, errors.New("error occurred while parsing token")
+	}
+
+	if !token.Valid {
+		return nil, errors.New("token is not valid")
+	}
+
+	return claims, nil
+}
