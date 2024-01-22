@@ -14,7 +14,7 @@ type ConfigType struct {
 }
 
 func GetConfig () ConfigType {
-	godotenv.Load("./config/.env")
+	godotenv.Load(".env")
 
 	var DATABASE_URL = os.Getenv("DATABASE_URL")
 	var JWT_SECRET_KEY = os.Getenv("JWT_SECRET_KEY")
