@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type AuthServiceClient interface {
 	SignUp(ctx context.Context, in *RegisterUserInput, opts ...grpc.CallOption) (*LoginUserResponse, error)
 	LogIn(ctx context.Context, in *LoginUserInput, opts ...grpc.CallOption) (*LoginUserResponse, error)
+	RefreshToken(ctx context.Context, in *RefreshTokenInput, opts ...grpc.CallOption) (*LoginUserResponse, error)
 }
 
 type authServiceClient struct {
@@ -52,12 +53,22 @@ func (c *authServiceClient) LogIn(ctx context.Context, in *LoginUserInput, opts 
 	return out, nil
 }
 
+func (c *authServiceClient) RefreshToken(ctx context.Context, in *RefreshTokenInput, opts ...grpc.CallOption) (*LoginUserResponse, error) {
+	out := new(LoginUserResponse)
+	err := c.cc.Invoke(ctx, "/todo.AuthService/RefreshToken", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility
 type AuthServiceServer interface {
 	SignUp(context.Context, *RegisterUserInput) (*LoginUserResponse, error)
 	LogIn(context.Context, *LoginUserInput) (*LoginUserResponse, error)
+	RefreshToken(context.Context, *RefreshTokenInput) (*LoginUserResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -70,6 +81,9 @@ func (UnimplementedAuthServiceServer) SignUp(context.Context, *RegisterUserInput
 }
 func (UnimplementedAuthServiceServer) LogIn(context.Context, *LoginUserInput) (*LoginUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LogIn not implemented")
+}
+func (UnimplementedAuthServiceServer) RefreshToken(context.Context, *RefreshTokenInput) (*LoginUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RefreshToken not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 
@@ -120,6 +134,24 @@ func _AuthService_LogIn_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_RefreshToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RefreshTokenInput)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).RefreshToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/todo.AuthService/RefreshToken",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).RefreshToken(ctx, req.(*RefreshTokenInput))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -134,6 +166,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LogIn",
 			Handler:    _AuthService_LogIn_Handler,
+		},
+		{
+			MethodName: "RefreshToken",
+			Handler:    _AuthService_RefreshToken_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
