@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aRKO872/first-go-app/config"
 	pb "github.com/aRKO872/first-go-app/proto"
 	"gorm.io/gorm"
 
@@ -88,13 +89,16 @@ func validPassword(password string) bool {
 	return true
 }
 
-func checkUserExists (req *pb.RegisterUserInput, fromLogin bool) (*pb.Users, error) {
+func checkUserExists (email string, fromLogin bool) (*pb.Users, error) {
 	var user *pb.Users;
-	result := dbcontroller.DB.Where("email = ?", req.GetEmail()).First (&user);
+	result := dbcontroller.DB.Where("email = ?", email).First (&user);
 
 	if result.Error != nil {
 		// User not found
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			if fromLogin {
+				return nil, errors.New ("user does not exist. please sign up")
+			}
 			return nil, nil
 		}
 		return nil, errors.New ("error occured while checking existence of user")
@@ -103,11 +107,6 @@ func checkUserExists (req *pb.RegisterUserInput, fromLogin bool) (*pb.Users, err
 	// For Registration
 	if !fromLogin && user.GetId() != "" {
 		return nil, errors.New ("user already exists! please try logging in")
-	}
-
-	// For Logging In
-	if fromLogin && user.GetId() == "" {
-		return nil, errors.New ("user does not xxist. please sign up")
 	}
 
 	if fromLogin {
@@ -146,7 +145,7 @@ func generateToken(key string, expiration time.Duration, user_id string) (string
 	claims := &Claims{
 		UserId: user_id,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiration)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiration*time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
@@ -173,6 +172,37 @@ func ParseToken(tokenString string, key string) (*Claims, error) {
 
 	if !token.Valid {
 		return nil, errors.New("token is not valid")
+	}
+
+	return claims, nil
+}
+
+func comparePasswords(inputPassword string, hashedPassword string) bool {
+	passErr := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(inputPassword))
+
+	return passErr == nil
+}
+
+func ParseExpiredToken(expiredToken string, key string) (*Claims, error) {
+	claims := &Claims{}
+
+	oldTokenPayload, oldTokenErr := jwt.ParseWithClaims(expiredToken, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(config.GetConfig().JWT_SECRET_KEY), nil
+	})
+
+	claims, ok := oldTokenPayload.Claims.(*Claims)
+	if !ok {
+		return nil, errors.New("error getting custom claims")
+	}
+
+	if oldTokenErr != nil {
+		expirationTime := claims.ExpiresAt.Time
+
+		if time.Now().After(expirationTime) {
+			return claims, nil
+		} else {
+			return nil, errors.New("invalid token")
+		}
 	}
 
 	return claims, nil
